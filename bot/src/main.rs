@@ -13,11 +13,10 @@ fn main() {
     let mut reactor = IrcReactor::new().unwrap();
     let client = reactor.prepare_client_and_connect(&config).unwrap();
     client.identify().unwrap();
-    let mut PM = PluginManager::new(&client);
-    let name = "printer".to_string();
-    PM.load_plugin(LIB_PATH, &name);
+    let mut PM = PluginManager::new();
+    PM.load_plugin(&client, LIB_PATH, &"printer");
     reactor.register_client_with_handler(client, move |client, message| {
-        PM.handle_message(&message);
+        PM.handle_message(client, &message);
         Ok(())
     });
 
