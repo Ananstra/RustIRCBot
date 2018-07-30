@@ -1,0 +1,24 @@
+owners = ["kimani"]
+nickname = "rustbot"
+nick_password = "rustbotpassword"
+username = "rustbot"
+realname = "Rust Bot"
+server = "irc.cat.pdx.edu"
+port = 6697
+use_ssl = true
+encoding = "UTF-8"
+channels = ["#kimani"]
+umodes = "+RB-x"
+user_info = "Test rust irc bot"
+version = "irc:git:Rust"
+source = "This will be filled out some day"
+ping_time = 180
+ping_timeout = 10
+burst_window_length = 8
+max_messages_in_burst = 15
+should_ghost = false
+
+[channel_keys]
+"#kimani" = "kimani"
+
+

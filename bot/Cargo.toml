@@ -1,0 +1,8 @@
+[package]
+name = "irc_bot"
+version = "0.1.0"
+authors = ["Dylan Abraham <dylan.abraham22@gmail.com>"]
+
+[dependencies]
+irc = "0.13.5"
+libloading = "0.5"
