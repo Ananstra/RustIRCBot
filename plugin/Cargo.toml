@@ -1,0 +1,10 @@
+[package]
+name = "plugin"
+version = "0.1.0"
+authors = ["Dylan Abraham <dylan.abraham22@gmail.com>"]
+
+[lib]
+crate-type = ["dylib"]
+
+[dependencies]
+irc = "0.13.5"
