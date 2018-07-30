@@ -53,37 +53,34 @@ impl<'a> Plugin<'a> {
 /// Plugin manager for IRC bot.
 pub struct PluginManager<'a> {
     plugins: HashMap<&'a str, Plugin<'a>>,
-    client: &'a IrcClient,
 }
 
 impl<'a> PluginManager<'a> {
     /// Initialize a plugin manager with a given irc client.
-    pub fn new(client: &'a IrcClient) -> Self {
+    pub fn new() -> Self {
         PluginManager {
             plugins: HashMap::new(),
-            client: client,
         }
     }
     /// Load a plugin from the given library path with the given name.
-    pub fn load_plugin(&mut self, path: &'a str, name: &'a str) {
+    pub fn load_plugin(&mut self, client: &IrcClient, path: &'a str, name: &'a str) {
         let p = Plugin::new(path);
-        p.initialize(self.client);
+        p.initialize(client);
         self.plugins.insert(name, p);
     }
     /// Reload the named plugin.
-    pub fn reload_plugin(&mut self, name: &str) {
+    pub fn reload_plugin(&mut self, client: &IrcClient, name: &str) {
         let p = self.plugins.get_mut(name).unwrap();
         p.finalize();
         p.reload_plugin();
-        p.initialize(self.client);
+        p.initialize(client);
     }
     /// Reload all plugins.
-    pub fn reload_all(&mut self) {
-        let c = self.client;
+    pub fn reload_all(&mut self, client: &IrcClient) {
         self.plugins.values_mut().for_each(|plugin| {
             plugin.finalize();
             plugin.reload_plugin();
-            plugin.initialize(c);
+            plugin.initialize(client);
         });
     }
     /// Unload a plugin.
@@ -91,9 +88,11 @@ impl<'a> PluginManager<'a> {
         let p = self.plugins.remove(name).unwrap();
         p.finalize();
     }
+
     /// Pass a message to all plugins.
-    pub fn handle_message(&mut self, message: &Message) {
-        let c = self.client;
-        self.plugins.values_mut().for_each(|x| {x.handle_message(c, message)})
+    pub fn handle_message(&self, client: &IrcClient, message: &Message) {
+        self.plugins.values().for_each(move |x| {
+            x.handle_message(client, message)
+        })
     }
 }
