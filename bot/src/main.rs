@@ -14,7 +14,8 @@ fn main() {
     let client = reactor.prepare_client_and_connect(&config).unwrap();
     client.identify().unwrap();
     let mut PM = PluginManager::new();
-    PM.load_plugin(&client, LIB_PATH, &"printer");
+    // PM.load_plugin(&client, LIB_PATH, &"printer");
+    PM.load_plugin(&client, "target/debug/libalive_plugin.so", &"status");
     reactor.register_client_with_handler(client, move |client, message| {
         PM.handle_message(client, &message);
         Ok(())

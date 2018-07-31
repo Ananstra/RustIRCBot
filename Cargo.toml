@@ -3,4 +3,5 @@
 members = [
     "bot",
     "print_plugin",
+    "alive_plugin",
 ]
