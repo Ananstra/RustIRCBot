@@ -13,10 +13,10 @@ pub fn handle_message(client: &IrcClient, message: &Message) {
 
 #[no_mangle]
 pub fn initialize(_client: &IrcClient) {
-    println!("Printer initialized!")
+    println!("Alive Plugin initialized!")
 }
 
 #[no_mangle]
 pub fn finalize() {
-    println!("Printer finalized")
+    println!("Alive Plugin finalized")
 }
