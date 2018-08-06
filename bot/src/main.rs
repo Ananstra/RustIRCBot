@@ -34,8 +34,24 @@ fn term() {
 
         if cmd == "reload_all" {
             PLUGIN_MANAGER.lock().unwrap().reload_all();
+            continue;
         }
-        let caps = RELOAD_REGEX.captures(cmd);
+        let caps = RELOAD_REGEX.captures(&cmd).unwrap();
+        if let Some(plugin_name) = caps.get(1) {
+            PLUGIN_MANAGER.lock().unwrap().reload_plugin(&plugin_name.as_str());
+            continue;
+        }
+        let caps = UNLOAD_REGEX.captures(&cmd).unwrap();
+        if let Some(plugin_name) = caps.get(1) {
+            PLUGIN_MANAGER.lock().unwrap().unload_plugin(&plugin_name.as_str());
+            continue;
+        }
+        // let caps = LOAD_REGEX.captures(&cmd).unwrap();
+        // if let Some(plugin_name) = caps.get(1) {
+        //     if let Some (plugin_path) = caps.get(2) {
+        //         PLUGIN_MANAGER.lock().unwrap().load_plugin(&plugin_path.as_str(), &plugin_name.as_str());
+        //     }
+        // }
     }
 }
 
@@ -47,7 +63,7 @@ fn main() {
     let mut reactor = IrcReactor::new().unwrap();
     let client = reactor.prepare_client_and_connect(&config).unwrap();
     client.identify().unwrap();
-    PLUGIN_MANAGER.lock().unwrap().load_plugin(&client, "target/debug/libalive_plugin.so", &"status");
+    PLUGIN_MANAGER.lock().unwrap().load_plugin("target/debug/libalive_plugin.so", &"status");
     // Register Handler
     reactor.register_client_with_handler(client, |client, message| {
         PLUGIN_MANAGER.lock().unwrap().handle_message(client, &message);
