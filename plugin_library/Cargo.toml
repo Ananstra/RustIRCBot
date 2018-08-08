@@ -1,5 +1,5 @@
 [package]
-name = "alive_plugin"
+name = "plugin"
 version = "0.1.0"
 authors = ["Dylan Abraham <dylan.abraham22@gmail.com>"]
 
