@@ -18,7 +18,7 @@ impl Plugins {
         self.plugins.push(plugin.clone());
     }
 
-    pub fn unload_plugins(&mut self, lib: &Arc<Lib>) {
+    pub fn unload_plugin(&mut self, lib: &Arc<Lib>) {
         for i in (0..self.plugins.len()).rev() {
             if &self.plugins[i] == lib {
                 self.plugins.swap_remove(i);
@@ -33,7 +33,7 @@ impl Plugins {
     // called when a lib needs to be reloaded.
     pub fn reload_callback(&mut self, state: UpdateState, lib: Option<&Arc<Lib>>) {
         match state {
-            UpdateState::Before => Self::unload_plugins(self, lib.unwrap()),
+            UpdateState::Before => Self::unload_plugin(self, lib.unwrap()),
             UpdateState::After => Self::reload_plugin(self, lib.unwrap()),
             UpdateState::ReloadFailed(_) => println!("Failed to reload"),
         }

@@ -13,9 +13,9 @@ use regex::Regex;
 
 /// Global plugin state
 lazy_static! {
-    static ref plugins: Arc<Mutex<Plugins>> = Arc::new(Mutex::new(Plugins::new()));
-    static ref reload_handler: Arc<Mutex<DynamicReload<'static>>> = Arc::new(Mutex::new(DynamicReload::new(Some(vec!["plugins"]), Some("plugins"), Search::Backwards)));
-    static ref load_regex: Regex = Regex::new(r"!load (.*)").unwrap();
+    static ref PLUGINS: Arc<Mutex<Plugins>> = Arc::new(Mutex::new(Plugins::new()));
+    static ref RELOAD_HANDLER: Arc<Mutex<DynamicReload<'static>>> = Arc::new(Mutex::new(DynamicReload::new(Some(vec!["plugins"]), Some("plugins"), Search::Backwards)));
+    static ref LOAD_REGEX: Regex = Regex::new(r"!load (.*)").unwrap();
 }
 
 /// Main Loop
@@ -27,8 +27,8 @@ fn main() {
     let client = reactor.prepare_client_and_connect(&config).unwrap();
     client.identify().unwrap();
     // Load base plugin library
-    match reload_handler.lock().unwrap().add_library(&"plugin", PlatformName::Yes) {
-        Ok(lib) => plugins.lock().unwrap().add_plugin(&lib),
+    match RELOAD_HANDLER.lock().unwrap().add_library(&"plugin", PlatformName::Yes) {
+        Ok(lib) => PLUGINS.lock().unwrap().add_plugin(&lib),
         Err(e) => {
             println!("Unable to load dynamic library: {:?}", e);
             return;
@@ -43,18 +43,18 @@ fn main() {
             if let Command::PRIVMSG(ref chan, ref msg) = message.command {
                 if msg == "!reload" && config.is_owner(nick) {
                     println!("Triggering reload.");
-                    reload_handler.lock().unwrap().update(Plugins::reload_callback, &mut plugins.lock().unwrap());
+                    RELOAD_HANDLER.lock().unwrap().update(Plugins::reload_callback, &mut PLUGINS.lock().unwrap());
                 }
-                if let Some(caps) = load_regex.captures(msg){
+                if let Some(caps) = LOAD_REGEX.captures(msg){
                     if let Some(name) = caps.get(1) {
                         let name = name.as_str();
-                        match reload_handler.lock().unwrap().add_library(&name, PlatformName::Yes) {
+                        match RELOAD_HANDLER.lock().unwrap().add_library(&name, PlatformName::Yes) {
                             Ok(lib) => {
                                 println!("Loading plugin {}", name);
-                                plugins.lock().unwrap().add_plugin(&lib);
+                                PLUGINS.lock().unwrap().add_plugin(&lib);
                             }
-                            Err(e) => {
-                            client.send_privmsg(&chan, "Couldn't load that plugin.");
+                            Err(_) => {
+                                client.send_privmsg(&chan, "Couldn't load that plugin").unwrap();
                             }
                         }
                     }
@@ -62,7 +62,7 @@ fn main() {
             }
         }
         // Pass message on to plugins
-        plugins.lock().unwrap().handle_message(client, &message);
+        PLUGINS.lock().unwrap().handle_message(client, &message);
         Ok(())
     });
 
