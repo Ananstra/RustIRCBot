@@ -14,7 +14,7 @@ use regex::Regex;
 /// Global plugin state
 lazy_static! {
     static ref plugins: Arc<Mutex<Plugins>> = Arc::new(Mutex::new(Plugins::new()));
-    static ref reload_handler: Arc<Mutex<DynamicReload<'static>>> = Arc::new(Mutex::new(DynamicReload::new(Some(vec!["target/debug"]), Some("target/debug"), Search::Backwards)));
+    static ref reload_handler: Arc<Mutex<DynamicReload<'static>>> = Arc::new(Mutex::new(DynamicReload::new(Some(vec!["plugins"]), Some("plugins"), Search::Backwards)));
     static ref load_regex: Regex = Regex::new(r"!load (.*)").unwrap();
 }
 
@@ -35,13 +35,13 @@ fn main() {
         }
     }
     // Register Handler
-    reactor.register_client_with_handler(client, |client, message| {
+    reactor.register_client_with_handler(client, move |client, message| {
         // Print all messages to console for debugging/monitoring
         println!("{:?}", message);
-        // If bot owner triggers reload, reload TODO: Pull owner name from irc config file
+        // If bot owner triggers reload, reload
         if let Some(nick) = message.source_nickname() {
             if let Command::PRIVMSG(ref chan, ref msg) = message.command {
-                if msg == "!reload" && nick == "kimani"{
+                if msg == "!reload" && config.is_owner(nick) {
                     println!("Triggering reload.");
                     reload_handler.lock().unwrap().update(Plugins::reload_callback, &mut plugins.lock().unwrap());
                 }
