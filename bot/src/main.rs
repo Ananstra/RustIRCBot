@@ -38,13 +38,15 @@ fn main() {
     reactor.register_client_with_handler(client, move |client, message| {
         // Print all messages to console for debugging/monitoring
         println!("{:?}", message);
-        // If bot owner triggers reload, reload
+        // Bot owner plugin commands, must occur here as need access to plugin globals
         if let Some(nick) = message.source_nickname() {
             if let Command::PRIVMSG(ref chan, ref msg) = message.command {
+                // Reload plugins
                 if msg == "!reload" && config.is_owner(nick) {
                     println!("Triggering reload.");
                     RELOAD_HANDLER.lock().unwrap().update(Plugins::reload_callback, &mut PLUGINS.lock().unwrap());
                 }
+                // Load plugin
                 if let Some(caps) = LOAD_REGEX.captures(msg){
                     if let Some(name) = caps.get(1) {
                         let name = name.as_str();
