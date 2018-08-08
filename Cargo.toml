@@ -2,6 +2,5 @@
 
 members = [
     "bot",
-    "print_plugin",
-    "alive_plugin",
+    "plugin_library",
 ]

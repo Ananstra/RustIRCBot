@@ -1,42 +1,18 @@
 extern crate irc;
-extern crate libloading;
 extern crate regex;
-mod plugin;
+extern crate dynamic_reload;
 #[macro_use]
 extern crate lazy_static;
-#[macro_use]
-extern crate text_io;
+mod plugin;
 
 use irc::client::prelude::*;
-use plugin::PluginManager;
-use regex::Regex;
-use std::thread;
-use std::sync::{Arc, Mutex};
-
-const LIB_PATH: &'static str = "target/debug/libprint_plugin.so"; 
+use plugin::Plugins;
+use dynamic_reload::{DynamicReload,PlatformName, Search};
+use std::sync::{Arc,Mutex};
 
 lazy_static! {
-    static ref RELOAD_REGEX: Regex = Regex::new(r#"reload (.*)"#).unwrap();
-    static ref UNLOAD_REGEX: Regex = Regex::new(r#"unload (.*)"#).unwrap();
-    static ref LOAD_REGEX: Regex = Regex::new(r#"load (.*) (.*)"#).unwrap();
-    static ref PLUGIN_MANAGER: Arc<Mutex<PluginManager<'static>>> = Arc::new(Mutex::new(PluginManager::new()));
-}
-
-/// Plugin Management Terminal
-fn term() {
-    loop {
-        println!("Enter a command.");
-        let cmd: String = read!("{}\n");
-
-        if cmd == "exit" || cmd == "quit" || cmd == "halt" {
-            std::process::exit(0);
-        }
-
-        if cmd == "reload_all" {
-            PLUGIN_MANAGER.lock().unwrap().reload_all();
-        }
-        let caps = RELOAD_REGEX.captures(cmd);
-    }
+    static ref plugins: Arc<Mutex<Plugins>> = Arc::new(Mutex::new(Plugins::new()));
+    static ref reload_handler: Arc<Mutex<DynamicReload<'static>>> = Arc::new(Mutex::new(DynamicReload::new(Some(vec!["target/debug"]), Some("target/debug"), Search::Backwards)));
 }
 
 /// Main Loop
@@ -47,16 +23,26 @@ fn main() {
     let mut reactor = IrcReactor::new().unwrap();
     let client = reactor.prepare_client_and_connect(&config).unwrap();
     client.identify().unwrap();
-    PLUGIN_MANAGER.lock().unwrap().load_plugin(&client, "target/debug/libalive_plugin.so", &"status");
+    match reload_handler.lock().unwrap().add_library(&"plugin", PlatformName::Yes) {
+        Ok(lib) => plugins.lock().unwrap().add_plugin(&lib),
+        Err(e) => {
+            println!("Unable to load dynamic library: {:?}", e);
+            return;
+        }
+    }
     // Register Handler
     reactor.register_client_with_handler(client, |client, message| {
-        PLUGIN_MANAGER.lock().unwrap().handle_message(client, &message);
+        println!("{:?}", message);
+        if let Some(nick) = message.source_nickname() {
+            if let Command::PRIVMSG(ref _chan, ref msg) = message.command {
+                if msg == "!reload" && nick == "kimani"{
+                    println!("Triggering reload.");
+                    reload_handler.lock().unwrap().update(Plugins::reload_callback, &mut plugins.lock().unwrap());
+                }
+            }
+        }
+        plugins.lock().unwrap().handle_message(client, &message);
         Ok(())
-    });
-
-    // Kick off terminal
-    thread::spawn(move || {
-        term();
     });
 
     // Kick off IRC Client
