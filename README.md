@@ -11,3 +11,6 @@ Plugins are expected to be platform dynamic library files (.dll, .so, etc) which
 
 
 where the client and message types are structs from the Rust IRC crate.
+
+
+More plugins for this bot can be found [here](https://github.com/Ananstra/RustIRCBotPlugins/).
