@@ -1,0 +1,23 @@
+owners = ["your_name_here"]
+nickname = "rustbot"
+nick_password = "rustbotpassword"
+username = "rustbot"
+realname = "Rust Bot"
+server = "irc.example.com"
+port = 6697
+use_ssl = true
+encoding = "UTF-8"
+channels = ["#channel"]
+umodes = "+RB-x"
+user_info = "Test rust irc bot"
+version = "irc:git:Rust"
+source = "github.com/Ananstra/RustIRCBot"
+ping_time = 180
+ping_timeout = 10
+burst_window_length = 8
+max_messages_in_burst = 15
+should_ghost = false
+
+[channel_keys]
+"#channel" = "hunter2"
+
