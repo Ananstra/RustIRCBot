@@ -43,6 +43,10 @@ fn main() {
                     PLUGINS.lock().unwrap().initialize_all(client);
                     client.send_privmsg(&chan, "Reloaded plugins successfully.").unwrap();
                 }
+                if msg == "!listplugins" && config.is_owner(nick) {
+                    println!("Printing descriptions.");
+                    PLUGINS.lock().unwrap().print_descriptions(client, &chan);
+                }
                 // Load plugin
                 if let Some(caps) = LOAD_REGEX.captures(msg) {
                     if let Some(name) = caps.get(1) {
