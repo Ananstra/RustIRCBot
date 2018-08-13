@@ -42,7 +42,9 @@ impl Plugins {
         match state {
             UpdateState::Before => Self::unload_plugin(self, lib.unwrap()),
             UpdateState::After => Self::reload_plugin(self, lib.unwrap()),
-            UpdateState::ReloadFailed(_) => error!("Failed to reload plugins in reload_callback"),
+            UpdateState::ReloadFailed(e) => {
+                error!("Failed to reload plugins in reload_callback with {:?}", e)
+            }
         }
     }
 

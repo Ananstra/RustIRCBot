@@ -7,7 +7,9 @@ use irc::client::prelude::*;
 pub fn handle_message(client: &IrcClient, message: &Message) {
     if let Command::PRIVMSG(ref channel, ref msg) = message.command {
         if msg.contains("!status") {
-            client.send_privmsg(&channel, "<3");
+            client
+                .send_privmsg(&channel, "<3")
+                .unwrap_or_else(|e| println!("send_privmsg failed {:?}", e));
         }
     }
 }
@@ -16,7 +18,9 @@ pub fn handle_message(client: &IrcClient, message: &Message) {
 #[no_mangle]
 pub fn initialize(client: &IrcClient) {
     for channel in client.list_channels().unwrap() {
-        client.send_privmsg(&channel, "RustBot example plugin online!");
+        client
+            .send_privmsg(&channel, "RustBot example plugin online!")
+            .unwrap_or_else(|e| println!("send_privmsg failed {:?}", e));
     }
 }
 
@@ -29,5 +33,9 @@ pub fn finalize() {
 /// print_description is where the plugin should write to the provided channel a brief description of itself.
 #[no_mangle]
 pub fn print_description(client: &IrcClient, channel: &str) {
-    client.send_privmsg(&channel, "plugin: A simple example plugin");
+    client
+        .send_privmsg(&channel, "plugin: A simple example plugin")
+        .unwrap_or_else(|e| {
+            println!{"send_privmsg failed {:?}", e}
+        });
 }
