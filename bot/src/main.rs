@@ -11,7 +11,8 @@ use dynamic_reload::{DynamicReload,PlatformName, Search};
 use std::sync::{Arc,Mutex};
 use regex::Regex;
 
-/// Global plugin state
+/// Global plugin state is defined here.
+/// Also define static reference Regexes for improved performance.
 lazy_static! {
     static ref PLUGINS: Arc<Mutex<Plugins>> = Arc::new(Mutex::new(Plugins::new()));
     static ref RELOAD_HANDLER: Arc<Mutex<DynamicReload<'static>>> = Arc::new(Mutex::new(DynamicReload::new(Some(vec!["plugins"]), Some("plugins"), Search::Backwards)));
@@ -37,7 +38,9 @@ fn main() {
                 // Reload plugins
                 if msg == "!reload" && config.is_owner(nick) {
                     println!("Triggering reload.");
+                    PLUGINS.lock().unwrap().finalize_all();
                     RELOAD_HANDLER.lock().unwrap().update(Plugins::reload_callback, &mut PLUGINS.lock().unwrap());
+                    PLUGINS.lock().unwrap().initialize_all(client);
                     client.send_privmsg(&chan, "Reloaded plugins successfully.").unwrap();
                 }
                 // Load plugin
@@ -48,6 +51,7 @@ fn main() {
                             Ok(lib) => {
                                 println!("Loading plugin {}", name);
                                 PLUGINS.lock().unwrap().add_plugin(&lib);
+                                PLUGINS.lock().unwrap().initialize_plugin(&lib,client);
                                 client.send_privmsg(&chan, &format!("Successfully loaded {}", name)).unwrap();
                             }
                             Err(_) => {
