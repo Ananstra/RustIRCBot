@@ -4,6 +4,9 @@ extern crate dynamic_reload;
 extern crate ctrlc;
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate log;
+extern crate env_logger;
 mod plugin;
 
 use irc::client::prelude::*;
@@ -20,41 +23,67 @@ lazy_static! {
     static ref LOAD_REGEX: Regex = Regex::new(r"!load (.*)").unwrap();
 }
 
+/// This function cleanly exits the program by finalizing all plugins before exiting.
 fn quit() {
     PLUGINS.lock().unwrap().finalize_all();
-    println!("Plugins finalized, exiting.");
+    info!("Plugins finalized, exiting.");
     std::process::exit(0);
 }
 
-/// Main Loop
+/// Entry Point
 fn main() {
+    env_logger::init();
     // Load Configuration
-    let config = Config::load("config.toml").unwrap();
+    let config = match Config::load("config.toml") {
+        Ok(c) => c,
+        Err(e) => {
+            error!("Unable to load config.toml for IRC configuration with error {:?}, exiting!", e);
+            std::process::exit(1);
+        }
+    };
     // Initialize IRC client
-    let mut reactor = IrcReactor::new().unwrap();
-    let client = reactor.prepare_client_and_connect(&config).unwrap();
-    client.identify().unwrap();
+    let mut reactor = match IrcReactor::new() {
+        Ok(r) => r,
+        Err(e) => {
+            error!("Unable to initialize IrcReactor with error {:?}, exiting!", e);
+            std::process::exit(1);
+        }
+    };
+    let client = match reactor.prepare_client_and_connect(&config) {
+        Ok(c) => c,
+        Err(e) => {
+            error!("Unable to initialize IrcClient with error {:?}, exiting!", e);
+            std::process::exit(1);
+        }
+    };
+    // Identify to server
+    match client.identify() {
+        Ok(_) => info!("Sent identify."),
+        Err(e) => {
+            warn!("Identify call failed with error {:?}", e);
+        }
+    };
     // Register Handler
     reactor.register_client_with_handler(client, move |client, message| {
         // Print all messages to console for debugging/monitoring
-        println!("{:?}", message);
+        debug!("{:?}", message);
         // Bot owner plugin commands, must occur here as need access to plugin globals
         if let Some(nick) = message.source_nickname() {
             if let Command::PRIVMSG(ref chan, ref msg) = message.command {
                 // Reload plugins
                 if msg == "!reload" && config.is_owner(nick) {
-                    println!("Triggering reload.");
+                    info!("Reloading plugins.");
                     PLUGINS.lock().unwrap().finalize_all();
                     RELOAD_HANDLER.lock().unwrap().update(Plugins::reload_callback, &mut PLUGINS.lock().unwrap());
                     PLUGINS.lock().unwrap().initialize_all(client);
-                    client.send_privmsg(&chan, "Reloaded plugins successfully.").unwrap();
+                    client.send_privmsg(&chan, "Reloaded plugins successfully.").unwrap_or_else(|e| {warn!("send_privmsg failed for plugin reload with error {:?}.", e);});
                 }
                 if msg == "!listplugins" && config.is_owner(nick) {
-                    println!("Printing descriptions.");
+                    debug!("Printing plugin descriptions.");
                     PLUGINS.lock().unwrap().print_descriptions(client, &chan);
                 }
                 if msg == "!goodbye" && config.is_owner(nick) {
-                    client.send_privmsg(&chan, "Goodbye.").unwrap();
+                    client.send_privmsg(&chan, "Goodbye.").unwrap_or_else(|e| {warn!("send_privmsg failed for goodbye with error {:?}", e);});
                     quit();
                 }
                 // Load plugin
@@ -66,10 +95,10 @@ fn main() {
                                 println!("Loading plugin {}", name);
                                 PLUGINS.lock().unwrap().add_plugin(&lib);
                                 PLUGINS.lock().unwrap().initialize_plugin(&lib,client);
-                                client.send_privmsg(&chan, &format!("Successfully loaded {}", name)).unwrap();
+                                client.send_privmsg(&chan, &format!("Successfully loaded {}", name)).unwrap_or_else(|e| {warn!("send_privmsg failed for plugin load notice with error {:?}", e);});
                             }
                             Err(_) => {
-                                client.send_privmsg(&chan, &format!("Unable to load {}", name)).unwrap();
+                                client.send_privmsg(&chan, &format!("Unable to load {}", name)).unwrap_or_else(|e| {warn!("send_privmsg failed for plugin load failure notice with error {:?}", e);});
                             }
                         }
                     }
@@ -82,10 +111,15 @@ fn main() {
     });
 
     // Setup exit handler
-    ctrlc::set_handler( || {
+    ctrlc::set_handler(|| {
         quit();
-    }).unwrap();
+    }).unwrap_or_else(|e| {
+        error!("Failed to register SIGINT/SIGTERM handler with error {:?}", e);
+    });
 
     // Kick off IRC Client
-    reactor.run().unwrap();
+    reactor.run().unwrap_or_else(|e| {
+        error!("Failed to start reactor run with error {:?}", e);
+        std::process::exit(1);
+    });
 }
