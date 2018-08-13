@@ -13,7 +13,9 @@ pub struct Plugins {
 impl Plugins {
     /// Create an empty list of plugins
     pub fn new() -> Self {
-        Plugins { plugins: Vec::new() }
+        Plugins {
+            plugins: Vec::new(),
+        }
     }
 
     /// Add a wrapped library to the collection
@@ -40,21 +42,22 @@ impl Plugins {
         match state {
             UpdateState::Before => Self::unload_plugin(self, lib.unwrap()),
             UpdateState::After => Self::reload_plugin(self, lib.unwrap()),
-            UpdateState::ReloadFailed(_) => println!("Failed to reload"),
+            UpdateState::ReloadFailed(_) => error!("Failed to reload plugins in reload_callback"),
         }
     }
 
     /// Pass through an IrcClient to a plugin for initialization
     pub fn initialize_plugin(&self, plugin: &Arc<Lib>, client: &IrcClient) {
         unsafe {
-            match plugin.lib.get::<fn(&IrcClient)> (
-                b"initialize\0"
-            ) {
+            match plugin.lib.get::<fn(&IrcClient)>(b"initialize\0") {
                 Ok(f) => {
                     f(client);
-                },
+                }
                 Err(_) => {
-                    println!("Attempted to call initialize from {:?}, but was unable to load symbol.", plugin.original_path);
+                    warn!(
+                        "Attempted to call initialize from {:?}, but was unable to load symbol.",
+                        plugin.original_path
+                    );
                 }
             };
         }
@@ -70,14 +73,15 @@ impl Plugins {
     /// Finalize a plugin
     pub fn finalize_plugin(&self, plugin: &Arc<Lib>) {
         unsafe {
-            match plugin.lib.get::<fn()> (
-                b"finalize\0"
-            ) {
+            match plugin.lib.get::<fn()>(b"finalize\0") {
                 Ok(f) => {
                     f();
-                },
+                }
                 Err(_) => {
-                    println!("Attempted to call finalize from {:?}, but was unable to load symbol", plugin.original_path);
+                    warn!(
+                        "Attempted to call finalize from {:?}, but was unable to load symbol",
+                        plugin.original_path
+                    );
                 }
             };
         }
@@ -93,14 +97,15 @@ impl Plugins {
     pub fn print_descriptions(&self, client: &IrcClient, channel: &str) {
         for plugin in &self.plugins {
             unsafe {
-                match plugin.lib.get::<fn(&IrcClient, &str)> (
-                    b"print_description\0"
-                ) {
+                match plugin
+                    .lib
+                    .get::<fn(&IrcClient, &str)>(b"print_description\0")
+                {
                     Ok(f) => {
                         f(client, channel);
                     }
                     Err(_) => {
-                        println!("Attempted to call print_description from {:?}, but was unable to load symbol", plugin.original_path);
+                        warn!("Attempted to call print_description from {:?}, but was unable to load symbol", plugin.original_path);
                     }
                 };
             }
@@ -111,14 +116,15 @@ impl Plugins {
     pub fn handle_message(&self, client: &IrcClient, message: &Message) {
         for plugin in &self.plugins {
             unsafe {
-                match plugin.lib.get::<fn(&IrcClient, &Message)> (
-                    b"handle_message\0"
-                ) {
+                match plugin
+                    .lib
+                    .get::<fn(&IrcClient, &Message)>(b"handle_message\0")
+                {
                     Ok(f) => {
-                        f(client,message);
+                        f(client, message);
                     }
                     Err(_) => {
-                        println!("Attempted to call handle_message from {:?}, but was unable to load symbol", plugin.original_path);
+                        warn!("Attempted to call handle_message from {:?}, but was unable to load symbol", plugin.original_path);
                     }
                 };
             }
