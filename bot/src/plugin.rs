@@ -114,6 +114,22 @@ impl Plugins {
         }
     }
 
+    /// Print help messages to a channel.
+    pub fn print_help(&self, client: &IrcClient, channel: &str) {
+        for plugin in &self.plugins {
+            unsafe {
+                match plugin.lib.get::<fn(&IrcClient, &str)>(b"print_help\0") {
+                    Ok(f) => {
+                        f(client, channel);
+                    }
+                    Err(_) => {
+                        warn!("Attempted to call print_description from {:?}, but was unable to load symbol", plugin.original_path);
+                    }
+                }
+            }
+        }
+    }
+
     /// Pass a message through to all plugins
     pub fn handle_message(&self, client: &IrcClient, message: &Message) {
         for plugin in &self.plugins {

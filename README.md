@@ -23,6 +23,10 @@ This function is called before a plugin is unloaded/reloaded, and is intended to
 
 This function is meant to print a brief description of the plugin to the specified channel. 
 
+> print_help(client: &IrcClient, channel: &str) {...}
+
+This function is meant to print a detailed help message to the specified channel.
+
 A simple example of a plugin can be found in the example_plugin directory.
 
 

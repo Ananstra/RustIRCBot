@@ -81,9 +81,14 @@ fn main() {
         // Bot owner plugin commands, must occur here as need access to plugin globals
         if let Some(nick) = message.source_nickname() {
             if let Command::PRIVMSG(ref chan, ref msg) = message.command {
+                // Print help messages
+                if msg == "!help" {
+                    info!("Printing help messages");
+                    PLUGINS.lock().unwrap().print_help(client, &chan);
+                }
                 // Reload plugins
                 if msg == "!reload" && config.is_owner(nick) {
-                    info!("Reloading plugins.");
+                    info!("Reloading plugins");
                     PLUGINS.lock().unwrap().finalize_all();
                     RELOAD_HANDLER
                         .lock()
@@ -96,10 +101,12 @@ fn main() {
                             warn!("send_privmsg failed for plugin reload with error {:?}.", e);
                         });
                 }
+                // List loaded plugins
                 if msg == "!listplugins" && config.is_owner(nick) {
                     debug!("Printing plugin descriptions.");
                     PLUGINS.lock().unwrap().print_descriptions(client, &chan);
                 }
+                // Exit
                 if msg == "!goodbye" && config.is_owner(nick) {
                     client.send_privmsg(&chan, "Goodbye.").unwrap_or_else(|e| {
                         warn!("send_privmsg failed for goodbye with error {:?}", e);
@@ -116,7 +123,7 @@ fn main() {
                             .add_library(&name, PlatformName::Yes)
                         {
                             Ok(lib) => {
-                                println!("Loading plugin {}", name);
+                                info!("Loading plugin {}", name);
                                 PLUGINS.lock().unwrap().add_plugin(&lib);
                                 PLUGINS.lock().unwrap().initialize_plugin(&lib, client);
                                 client
