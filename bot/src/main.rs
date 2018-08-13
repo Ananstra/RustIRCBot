@@ -1,6 +1,7 @@
 extern crate irc;
 extern crate regex;
 extern crate dynamic_reload;
+extern crate ctrlc;
 #[macro_use]
 extern crate lazy_static;
 mod plugin;
@@ -17,7 +18,12 @@ lazy_static! {
     static ref PLUGINS: Arc<Mutex<Plugins>> = Arc::new(Mutex::new(Plugins::new()));
     static ref RELOAD_HANDLER: Arc<Mutex<DynamicReload<'static>>> = Arc::new(Mutex::new(DynamicReload::new(Some(vec!["plugins"]), Some("plugins"), Search::Backwards)));
     static ref LOAD_REGEX: Regex = Regex::new(r"!load (.*)").unwrap();
-    static ref UNLOAD_REGEX: Regex = Regex::new(r"!unload (.*)").unwrap();
+}
+
+fn quit() {
+    PLUGINS.lock().unwrap().finalize_all();
+    println!("Plugins finalized, exiting.");
+    std::process::exit(0);
 }
 
 /// Main Loop
@@ -47,6 +53,10 @@ fn main() {
                     println!("Printing descriptions.");
                     PLUGINS.lock().unwrap().print_descriptions(client, &chan);
                 }
+                if msg == "!goodbye" && config.is_owner(nick) {
+                    client.send_privmsg(&chan, "Goodbye.").unwrap();
+                    quit();
+                }
                 // Load plugin
                 if let Some(caps) = LOAD_REGEX.captures(msg) {
                     if let Some(name) = caps.get(1) {
@@ -70,6 +80,11 @@ fn main() {
         PLUGINS.lock().unwrap().handle_message(client, &message);
         Ok(())
     });
+
+    // Setup exit handler
+    ctrlc::set_handler( || {
+        quit();
+    }).unwrap();
 
     // Kick off IRC Client
     reactor.run().unwrap();
