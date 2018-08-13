@@ -39,3 +39,13 @@ pub fn print_description(client: &IrcClient, channel: &str) {
             println!{"send_privmsg failed {:?}", e}
         });
 }
+
+/// print_help is where the plugin should write a help message to the provided channel.
+#[no_mangle]
+pub fn print_help(client: &IrcClient, channel: &str) {
+    client
+        .send_privmsg(&channel, "!status - proves that this bot is alive!")
+        .unwrap_or_else(|e| {
+            println!{"send_privmsg failed {:?}", e}
+        });
+}
