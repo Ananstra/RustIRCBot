@@ -47,10 +47,16 @@ impl Plugins {
     /// Pass through an IrcClient to a plugin for initialization
     pub fn initialize_plugin(&self, plugin: &Arc<Lib>, client: &IrcClient) {
         unsafe {
-            let f = plugin.lib.get::<fn(&IrcClient)> (
+            match plugin.lib.get::<fn(&IrcClient)> (
                 b"initialize\0"
-            ).unwrap();
-            f(client);
+            ) {
+                Ok(f) => {
+                    f(client);
+                },
+                Err(_) => {
+                    println!("Attempted to call initialize from {:?}, but was unable to load symbol.", plugin.original_path);
+                }
+            };
         }
     }
 
@@ -64,10 +70,16 @@ impl Plugins {
     /// Finalize a plugin
     pub fn finalize_plugin(&self, plugin: &Arc<Lib>) {
         unsafe {
-            let f = plugin.lib.get::<fn()> (
+            match plugin.lib.get::<fn()> (
                 b"finalize\0"
-            ).unwrap();
-            f();
+            ) {
+                Ok(f) => {
+                    f();
+                },
+                Err(_) => {
+                    println!("Attempted to call finalize from {:?}, but was unable to load symbol", plugin.original_path);
+                }
+            };
         }
     }
     /// Finalize all plugins
@@ -81,10 +93,16 @@ impl Plugins {
     pub fn handle_message(&self, client: &IrcClient, message: &Message) {
         for plugin in &self.plugins {
             unsafe {
-                let f = plugin.lib.get::<fn(&IrcClient, &Message)> (
+                match plugin.lib.get::<fn(&IrcClient, &Message)> (
                     b"handle_message\0"
-                ).unwrap();
-                f(client,message);
+                ) {
+                    Ok(f) => {
+                        f(client,message);
+                    }
+                    Err(_) => {
+                        println!("Attempted to call handle_message from {:?}, but was unable to load symbol", plugin.original_path);
+                    }
+                };
             }
         }
     }
